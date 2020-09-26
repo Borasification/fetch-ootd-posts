@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+
+import requests
+import json
+import time
+import argparse
+from datetime import datetime
+from itertools import zip_longest
+from pathlib import Path
+import config
+
+FORUM_URL = 'https://forum.borasification.com'
+COMMON_HEADERS = {
+    'Api-Username': config.username, 
+    'Api-Key': config.api_secret
+    }
+OOTD_TOPIC_ID = 23
+
+def load_posts(grouped_post_ids):
+    all_posts = []
+
+    for post_ids in grouped_post_ids:
+        list_post_ids = [x for x in list(post_ids) if x is not None]
+        url = f'{FORUM_URL}/t/{OOTD_TOPIC_ID}/posts.json'
+        payload = { 'post_ids[]': list_post_ids }
+        r = requests.get(url, headers=COMMON_HEADERS, params=payload)
+        all_posts.append(r.json()['post_stream']['posts'])
+
+    # return the list of posts
+    return [item for sublist in all_posts for item in sublist]
+
+def search_posts(start_date, end_date, page=1):
+    url = f'{FORUM_URL}/search'
+    headers = {
+        **COMMON_HEADERS,
+        'content-type': 'application/json; charset=utf-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+    }
+    payload = {
+        'q': f'with:images topic:{OOTD_TOPIC_ID} after:{start_date} order:latest', 
+        'page': page
+        }
+    r = requests.get(url, headers=headers, params=payload)
+
+    # return the list of posts
+    return r.json()
+
+def download_all_posts(start_date, end_date):
+    
+    # Init var
+    post_ids = []
+    more_full_page_results = True
+    page = 1
+    end_datetime = datetime.strptime(end_date, '%Y-%m-%d')
+
+    # Results are paginated, so keep searching while there are more pages available
+    while more_full_page_results == True:
+
+        # Search 
+        resp = search_posts(start_date, end_datetime, page)
+        for a_post in resp['posts']:
+
+            # Create a data structure to keep relevant data
+            post_ids.append(a_post["id"])
+
+        # Check if more pages are availble. Loop if this is the case
+        more_full_page_results = resp['grouped_search_result']['more_full_page_results']
+        page = page + 1
+
+    # Group ids by 25, because the Discourse API cannot ingest more at a time
+    post_id_grouped_by_25 = list(zip_longest(*(iter(post_ids),) * 25))
+    posts = load_posts(post_id_grouped_by_25)
+    final_posts = []
+    for post in posts:
+        
+        # Only consider posts with at least an image
+        if not 'link_counts' in post:
+            continue
+        
+        # Get the post date
+        created_at = datetime.strptime(post['created_at'], '%Y-%m-%dT%H:%M:%S.%fZ')
+
+        # Need to filter posts that have been posted after the end date. Cannot fetch that from the API itself
+        if created_at > end_datetime:
+            continue
+
+        # Get the id
+        id = post['id']
+
+        # Get the username
+        username = post['username']
+
+        # Likes seem to be stored in the count element of the first element of the action_summary array...
+        # Default to 0 if not found
+        likes = post['actions_summary'][0].get('count', 0)
+
+        # The post itself
+        post_content = post['cooked']
+
+        images = []
+        for link_count in post['link_counts']:
+            images.append(link_count['url'])
+        
+        final_posts.append(
+            {
+                "id" : id,
+                "username": username,
+                "likes": likes,
+                "created_at": post['created_at'],
+                "images": images,
+                "post_content": post_content
+            }
+        )
+
+    # sort the posts by likes
+    sorted_posts = sorted(final_posts, key=lambda k: k['likes'], reverse=True)
+
+    # Write output in a file on disk    
+    Path(f"output/week_{start_date}_{end_date}/images").mkdir(parents=True, exist_ok=True)
+    Path(f"output/week_{start_date}_{end_date}/posts").mkdir(parents=True, exist_ok=True)
+
+    with open(f"output/week_{start_date}_{end_date}/images/images_url.txt","w+") as posts_file:
+        for post in sorted_posts:
+            for image_url in post['images']:
+                posts_file.write(f'{image_url}\n')
+
+    with open(f"output/week_{start_date}_{end_date}/posts/ordered_ootd_posts.txt","w+") as posts_file:
+        for post in sorted_posts:
+            posts_file.write(f'{json.dumps(post)}\n')
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Download posts from the OOTD Topic from Borasification Forum')
+    parser.add_argument('start_date', help='Start date, please use the following format 2020-09-14')
+    parser.add_argument('end_date', help='End date, please use the following format 2020-09-20')
+    arguments = parser.parse_args()
+    download_all_posts(arguments.start_date, arguments.end_date)
