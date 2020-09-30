@@ -119,6 +119,7 @@ def download_all_posts(start_date, end_date):
     # Write output in a file on disk    
     Path(f"output/week_{start_date}_{end_date}/images").mkdir(parents=True, exist_ok=True)
     Path(f"output/week_{start_date}_{end_date}/posts").mkdir(parents=True, exist_ok=True)
+    Path(f"output/week_{start_date}_{end_date}/top").mkdir(parents=True, exist_ok=True)
 
     with open(f"output/week_{start_date}_{end_date}/images/images_url.txt","w+") as posts_file:
         for post in sorted_posts:
@@ -128,6 +129,12 @@ def download_all_posts(start_date, end_date):
     with open(f"output/week_{start_date}_{end_date}/posts/ordered_ootd_posts.txt","w+") as posts_file:
         for post in sorted_posts:
             posts_file.write(f'{json.dumps(post)}\n')
+
+    with open(f"output/week_{start_date}_{end_date}/top/top_ootd.txt","w+") as posts_file:
+        for post in sorted_posts:
+            posts_file.write(f"**{post['username']}** likes: {post['likes']}\n![]({post['images'][0]})\n")
+    
+    print(f'Done. {len(sorted_posts)} posts found')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download posts from the OOTD Topic from Borasification Forum')
