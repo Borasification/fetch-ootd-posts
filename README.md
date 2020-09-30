@@ -9,7 +9,7 @@ It leverages Discourse API and it requires an API key that can be obtained from 
 ## Usage
 Ask for an API Key and put it in `config.py` file together with your Borasification `username`.
 
-Simply run `./fetch_ootd_posts {start_date} {end_date}` example `./fetch_ootd_posts 2020-09-21 2020-09-28`. The posts from the `start_date` are included and the posts from the `end_date` are excluded. If you want to fetch to posts from `2020-09-21` to `2020-09-27` , run the command ``./fetch_ootd_posts 2020-09-21 2020-09-28`.
+Simply run `./fetch_ootd_posts {start_date} {end_date}` example `./fetch_ootd_posts 2020-09-21 2020-09-28`. The posts from the `start_date` are included and the posts from the `end_date` are excluded. If you want to fetch to posts from `2020-09-21` to `2020-09-27` , run the command `./fetch_ootd_posts 2020-09-21 2020-09-28`.
 
 The script generates two files
 1. `output/{start_date}-{end_date}/images/images_url.txt` containing the url of the OOTD images. CAVEATS: Some urls might not be images and some are url from external image hosting. I didn't yet added the logic to get the proper image urls from those urls.
