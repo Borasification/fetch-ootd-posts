@@ -14,7 +14,8 @@ COMMON_HEADERS = {
     'Api-Username': config.username, 
     'Api-Key': config.api_secret
     }
-OOTD_TOPIC_ID = 23
+#OLD_OOTD_TOPIC_ID = 23
+OOTD_TOPIC_ID = 3457
 
 def load_posts(grouped_post_ids):
     all_posts = []
@@ -38,7 +39,7 @@ def search_posts(start_date, end_date, page=1):
         'Accept': 'application/json'
     }
     payload = {
-        'q': f'with:images topic:{OOTD_TOPIC_ID} after:{start_date} order:latest', 
+        'q': f'with:images topic:{OOTD_TOPIC_ID} after:{start_date} order:earliest', 
         'page': page
         }
     r = requests.get(url, headers=headers, params=payload)
@@ -63,9 +64,12 @@ def download_all_posts(start_date, end_date):
 
             # Create a data structure to keep relevant data
             post_ids.append(a_post["id"])
-
+            
+        # Get the post date
+        created_at = datetime.strptime(resp['posts'][-1]['created_at'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        
         # Check if more pages are availble. Loop if this is the case
-        more_full_page_results = resp['grouped_search_result']['more_full_page_results']
+        more_full_page_results = resp['grouped_search_result']['more_full_page_results'] and created_at < end_datetime
         page = page + 1
 
     # Group ids by 25, because the Discourse API cannot ingest more at a time
@@ -126,13 +130,18 @@ def download_all_posts(start_date, end_date):
             for image_url in post['images']:
                 posts_file.write(f'{image_url}\n')
 
+    with open(f"output/week_{start_date}_{end_date}/images/pictures_only.txt","w+") as posts_file:
+        for post in sorted_posts:
+            for image_url in post['images']:
+                posts_file.write(f'![]({image_url})\n')
+
     with open(f"output/week_{start_date}_{end_date}/posts/ordered_ootd_posts.txt","w+") as posts_file:
         for post in sorted_posts:
             posts_file.write(f'{json.dumps(post)}\n')
 
     with open(f"output/week_{start_date}_{end_date}/top/top_ootd.txt","w+") as posts_file:
         for post in sorted_posts:
-            posts_file.write(f"**{post['username']}** likes: {post['likes']}\n![]({post['images'][0]})\n")
+            posts_file.write(f"@{post['username']} likes: {post['likes']}\n![]({post['images'][0]})\n")
     
     print(f'Done. {len(sorted_posts)} posts found')
 
