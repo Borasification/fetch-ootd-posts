@@ -59,7 +59,8 @@ def badge_specs(period: Period) -> Dict[str, BadgeSpec]:
         year = period.year
         return {
             WINNER: BadgeSpec(f'OOTD of the Year {year}', f'Tenue la plus appréciée de {year}', GOLD),
-            TOP10: BadgeSpec(f'OOTD Top 10 {year}', f'Une des 10 meilleures tenues de {year}', SILVER),
+            TOP10: BadgeSpec(f'OOTD Top {period.top_n} {year}',
+                             f'Une des {period.top_n} meilleures tenues de {year}', SILVER),
             MONTHLY: MONTHLY_BADGE,
             MEMBER: BadgeSpec(f'Member of the Year {year}', f'Membre de l\'année {year} sur l\'OOTD', GOLD),
             RISING: BadgeSpec(f'Rising Star {year}', f'Révélation OOTD de l\'année {year}', SILVER),

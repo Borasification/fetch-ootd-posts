@@ -9,13 +9,14 @@ they render natively in [grid] blocks and lightboxes.
 import string
 from typing import Dict, List, Optional
 
-from .awards import MAX_PER_MEMBER_IN_TOP, Awards, MemberStats
+from .awards import Awards, MemberStats
 from .dataset import Post
 from .period import month_name
 
 BASE62_ALPHABET = string.digits + string.ascii_lowercase + string.ascii_uppercase
 
 WRAPPED_TOP_N = 3
+TOP_BLOCK = 10  # a long top (50) is shown in blocks of 10 ranks
 LOOKBOOK_TOP_N = 5
 
 
@@ -88,7 +89,7 @@ def render_awards(awards: Awards) -> str:
         '',
         '> Classement sur les likes reçus pendant les 30 premiers jours de chaque tenue, '
         'pour que les tenues de fin de période aient les mêmes chances que les autres. '
-        f'Au plus {MAX_PER_MEMBER_IN_TOP} tenues par membre dans le top 10.',
+        f'Au plus {period.max_per_member} tenues par membre dans le top {period.top_n}.',
         '',
     ]
 
@@ -96,11 +97,18 @@ def render_awards(awards: Awards) -> str:
     if winner:
         lines += [f'## :1st_place_medal: Tenue {period.of}', '', caption(winner), '', image(winner), '']
 
-    runners_up = awards.top[1:]
+    runners_up = list(enumerate(awards.top, 1))[1:]
     if runners_up:
-        lines += ['## :star: Le top 10', '', grid(runners_up), '']
-        lines += [f'{rank}. {caption(post)}' for rank, post in enumerate(runners_up, 2)]
-        lines.append('')
+        lines += [f'## :star: Le top {period.top_n}', '']
+        # ranks 2-10, then 11-20, 21-30...: one grid and its captions per block
+        blocks = [runners_up[:TOP_BLOCK - 1]]
+        blocks += [runners_up[i:i + TOP_BLOCK] for i in range(TOP_BLOCK - 1, len(runners_up), TOP_BLOCK)]
+        for block in blocks:
+            if len(awards.top) > TOP_BLOCK:
+                lines += [f'### {block[0][0]}–{block[-1][0]}', '']
+            lines += [grid([post for _, post in block]), '']
+            lines += [f'{rank}. {caption(post)}' for rank, post in block]
+            lines.append('')
 
     if awards.monthly and period.kind != 'month':
         monthly = list(awards.monthly.items())
@@ -174,7 +182,7 @@ def member_honours(awards: Awards, username: str) -> List[str]:
     if awards.winner and awards.winner.username == username:
         honours.append(f'Tenue {of}')
     elif any(p.username == username for p in awards.top):
-        honours.append(f'Top 10 {of}')
+        honours.append(f'Top {awards.period.top_n} {of}')
     months = [month_name(m) for m, p in awards.monthly.items() if p.username == username]
     if months and awards.period.kind != 'month':
         honours.append(f'Tenue du mois ({", ".join(months)})')

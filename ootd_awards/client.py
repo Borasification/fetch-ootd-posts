@@ -17,6 +17,8 @@ from .constants import (
     MAX_BACKOFF_SECONDS,
     MAX_RETRIES,
     MAX_TOKENS,
+    REQUEST_TIMEOUT,
+    TRANSIENT_STATUS,
     RATE_LIMIT_LIMIT_HEADER,
     RATE_LIMIT_REMAINING_HEADER,
     RATE_LIMIT_RESET_HEADER,
@@ -95,19 +97,49 @@ class DiscourseClient:
         url: str,
         headers: Dict,
         params: Optional[Dict] = None,
-        json_body: Optional[Dict] = None
+        json_body: Optional[Dict] = None,
+        idempotent: bool = True
     ) -> requests.Response:
-        """Send a single HTTP request (no rate limiting, no retries)."""
-        if method == 'GET':
-            return requests.get(url, headers=headers, params=params)
-        return requests.request(method, url, headers=headers, params=params, json=json_body)
+        """
+        Send an HTTP request, retrying network glitches (no rate limiting).
+
+        A request that never reached the forum (connection failure) is always
+        retried. Timeouts, dropped connections and 502/503/504 are retried only
+        for idempotent requests: retrying a post, PM or badge grant that the
+        forum may already have processed could create a duplicate.
+        """
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                if method == 'GET':
+                    response = requests.get(url, headers=headers, params=params, timeout=REQUEST_TIMEOUT)
+                else:
+                    response = requests.request(method, url, headers=headers, params=params, json=json_body,
+                                                timeout=REQUEST_TIMEOUT)
+            except requests.exceptions.ConnectTimeout as error:
+                problem = error
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as error:
+                if not idempotent:
+                    raise
+                problem = error
+            else:
+                if response.status_code not in TRANSIENT_STATUS or not idempotent or attempt == MAX_RETRIES:
+                    return response
+                problem = f'HTTP {response.status_code}'
+
+            if attempt == MAX_RETRIES:
+                raise problem
+            wait = min(2 ** attempt, MAX_BACKOFF_SECONDS)
+            print(f'Network problem ({type(problem).__name__ if isinstance(problem, Exception) else problem}), '
+                  f'retrying in {wait}s (attempt {attempt + 1}/{MAX_RETRIES})...')
+            time.sleep(wait)
     
     def _request(
         self,
         method: str,
         path: str,
         params: Optional[Dict] = None,
-        json_body: Optional[Dict] = None
+        json_body: Optional[Dict] = None,
+        idempotent: Optional[bool] = None
     ) -> Dict:
         """
         Make a rate-limited API request and return the decoded JSON.
@@ -117,6 +149,7 @@ class DiscourseClient:
             path: Path relative to the forum URL, e.g. '/posts.json'
             params: Query string parameters
             json_body: JSON body for non-GET requests
+            idempotent: Safe to retry after a timeout (default: only GET)
             
         Returns:
             Decoded JSON response (empty dict for empty bodies)
@@ -127,8 +160,10 @@ class DiscourseClient:
         self._wait_for_rate_limit()
         
         url = f'{self.forum_url}{path}'
-        response = self._send(method, url, self.headers, params, json_body)
-        response = self._handle_rate_limit(response, url, params, self.headers, method, json_body)
+        if idempotent is None:
+            idempotent = method == 'GET'
+        response = self._send(method, url, self.headers, params, json_body, idempotent)
+        response = self._handle_rate_limit(response, url, params, self.headers, method, json_body, idempotent)
         
         if response.status_code not in HTTP_SUCCESS:
             raise RequestException(
@@ -144,7 +179,8 @@ class DiscourseClient:
         params: Optional[Dict] = None,
         headers: Optional[Dict] = None,
         method: str = 'GET',
-        json_body: Optional[Dict] = None
+        json_body: Optional[Dict] = None,
+        idempotent: bool = True
     ) -> requests.Response:
         """
         Handle rate limiting with exponential backoff and header parsing.
@@ -180,7 +216,7 @@ class DiscourseClient:
             time.sleep(wait_seconds)
             
             # Retry with the same request
-            response = self._send(method, url, original_headers, original_params, json_body)
+            response = self._send(method, url, original_headers, original_params, json_body, idempotent)
             retry_count += 1
         
         if response.status_code == HTTP_TOO_MANY_REQUESTS:
@@ -209,7 +245,9 @@ class DiscourseClient:
             List of rows, each a dict keyed by column name
         """
         body = {'params': json.dumps(params or {}), 'limit': limit}
-        result = self._request('POST', f'/admin/plugins/explorer/queries/{query_id}/run', json_body=body)
+        # a Data Explorer run is read-only: safe to retry
+        result = self._request('POST', f'/admin/plugins/explorer/queries/{query_id}/run', json_body=body,
+                               idempotent=True)
         columns = result.get('columns', [])
         return [dict(zip(columns, row)) for row in result.get('rows', [])]
     

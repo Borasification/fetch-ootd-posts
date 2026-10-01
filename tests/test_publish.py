@@ -27,7 +27,7 @@ class TestBadges:
         assert ('Member of the Year 2025', 'bob') in summary
         assert ('Rising Star 2025', 'carol') in summary
         # Top 10 badge granted once per member, even with two outfits in the top
-        assert [u for b, u in summary if b == 'OOTD Top 10 2025'].count('alice') == 1
+        assert [u for b, u in summary if b == 'OOTD Top 50 2025'].count('alice') == 1
         # Monthly badge can be granted several times
         assert [u for b, u in summary if b == 'OOTD of the Month'].count('alice') == 2
 

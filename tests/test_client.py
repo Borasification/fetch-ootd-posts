@@ -190,3 +190,62 @@ class TestDiscourseClientWrites:
 
         assert client.list_badges() == [{'id': 1, 'name': 'Basic'}]
         assert mock_get.call_args.args[0] == 'https://forum.example.com/admin/badges.json'
+
+
+class TestNetworkRetries:
+    """Network glitches are retried only when a retry cannot create a duplicate."""
+
+    @staticmethod
+    def ok(payload):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = payload
+        response.content = b'{}'
+        response.headers = {}
+        return response
+
+    @patch('time.sleep')
+    @patch('requests.request')
+    def test_query_retried_after_connect_timeout(self, mock_request, mock_sleep):
+        mock_request.side_effect = [requests.exceptions.ConnectTimeout(), self.ok({'columns': [], 'rows': []})]
+        client = DiscourseClient('https://forum.example.com', 'user', 'key')
+        assert client.run_query(1) == []
+        assert mock_request.call_count == 2
+        assert mock_request.call_args.kwargs['timeout'] == (10, 120)
+
+    @patch('time.sleep')
+    @patch('requests.request')
+    def test_query_retried_after_read_timeout_and_503(self, mock_request, mock_sleep):
+        unavailable = self.ok({})
+        unavailable.status_code = 503
+        mock_request.side_effect = [requests.exceptions.ReadTimeout(), unavailable,
+                                    self.ok({'columns': ['id'], 'rows': [[1]]})]
+        client = DiscourseClient('https://forum.example.com', 'user', 'key')
+        assert client.run_query(1) == [{'id': 1}]
+        assert mock_request.call_count == 3
+
+    @patch('time.sleep')
+    @patch('requests.request')
+    def test_post_retried_only_if_it_never_reached_the_forum(self, mock_request, mock_sleep):
+        mock_request.side_effect = [requests.exceptions.ConnectTimeout(), self.ok({'id': 9})]
+        client = DiscourseClient('https://forum.example.com', 'user', 'key')
+        assert client.create_post('hello', topic_id=3) == {'id': 9}
+
+    @patch('time.sleep')
+    @patch('requests.request')
+    def test_post_not_retried_after_read_timeout(self, mock_request, mock_sleep):
+        # the forum may already have created the post: never send it twice
+        mock_request.side_effect = [requests.exceptions.ReadTimeout(), self.ok({'id': 9})]
+        client = DiscourseClient('https://forum.example.com', 'user', 'key')
+        with pytest.raises(requests.exceptions.ReadTimeout):
+            client.create_post('hello', topic_id=3)
+        assert mock_request.call_count == 1
+
+    @patch('time.sleep')
+    @patch('requests.request')
+    def test_gives_up_after_max_retries(self, mock_request, mock_sleep):
+        mock_request.side_effect = requests.exceptions.ConnectTimeout()
+        client = DiscourseClient('https://forum.example.com', 'user', 'key')
+        with pytest.raises(requests.exceptions.ConnectTimeout):
+            client.run_query(1)
+        assert mock_request.call_count == 5

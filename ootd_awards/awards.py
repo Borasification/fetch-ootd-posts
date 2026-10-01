@@ -14,8 +14,6 @@ from typing import Dict, List, Optional, Tuple
 from .dataset import Post
 from .period import Period
 
-TOP_N = 10
-MAX_PER_MEMBER_IN_TOP = 2
 CONSISTENCY_PERCENTILE = 0.75
 
 
@@ -28,7 +26,7 @@ def ranked(posts: List[Post]) -> List[Post]:
     return sorted(posts, key=rank_key)
 
 
-def top_outfits(posts: List[Post], n: int = TOP_N, max_per_member: int = MAX_PER_MEMBER_IN_TOP) -> List[Post]:
+def top_outfits(posts: List[Post], n: int, max_per_member: int) -> List[Post]:
     """Best n outfits, with at most max_per_member outfits from the same member."""
     selected = []
     per_member = Counter()
@@ -176,7 +174,7 @@ def compute_awards(posts: List[Post], period: Period) -> Awards:
     return Awards(
         period=period,
         outfits=outfits,
-        top=top_outfits(outfits),
+        top=top_outfits(outfits, period.top_n, period.max_per_member),
         monthly=monthly_winners(outfits),
         members=rank_members(stats),
         rising=rising_stars(stats, period),
