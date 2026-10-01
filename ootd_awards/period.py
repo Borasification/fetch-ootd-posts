@@ -20,12 +20,15 @@ QUARTER_ORDINALS_FR = ['premier', 'deuxième', 'troisième', 'quatrième']
 # results only settle 30 days after it ends.
 LIKES_WINDOW_DAYS = 30
 
-# Rules that scale with the period length: (best outfits summed for the member
-# ranking, minimum outfits for Rising Star and for a Wrapped message).
+# Rules that scale with the period length:
+#   top_n           size of the top outfits ranking
+#   max_per_member  outfits a member can place in that ranking
+#   member_best_n   best outfits summed for the member ranking
+#   min_outfits     minimum outfits for Rising Star and for a Wrapped message
 RULES = {
-    'year': (10, 5),
-    'quarter': (5, 3),
-    'month': (3, 2),
+    'year': {'top_n': 50, 'max_per_member': 5, 'member_best_n': 10, 'min_outfits': 5},
+    'quarter': {'top_n': 10, 'max_per_member': 2, 'member_best_n': 5, 'min_outfits': 3},
+    'month': {'top_n': 10, 'max_per_member': 2, 'member_best_n': 3, 'min_outfits': 2},
 }
 
 
@@ -138,9 +141,17 @@ class Period:
         return {'year': 'cette année', 'quarter': 'ce trimestre', 'month': 'ce mois-ci'}[self.kind]
 
     @property
+    def top_n(self) -> int:
+        return RULES[self.kind]['top_n']
+
+    @property
+    def max_per_member(self) -> int:
+        return RULES[self.kind]['max_per_member']
+
+    @property
     def member_best_n(self) -> int:
-        return RULES[self.kind][0]
+        return RULES[self.kind]['member_best_n']
 
     @property
     def min_outfits(self) -> int:
-        return RULES[self.kind][1]
+        return RULES[self.kind]['min_outfits']

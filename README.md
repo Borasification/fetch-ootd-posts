@@ -2,7 +2,7 @@
 
 Highlights the community's best outfits on the Borasification forum for a **year**, a **quarter** or a **month**:
 
-- an **awards topic**: outfit of the period, top 10, outfit of each month, member of the period, rising star, most consistent. It is drafted to you as a private message before anything is published;
+- an **awards topic**: outfit of the period, top 50 for a year or top 10 for a quarter or month, outfit of each month, member of the period, rising star, most consistent. It is drafted to you as a private message before anything is published;
 - **forum badges** for the winners, each linked to the winning post;
 - a personal **"Wrapped"** private message for each active member: outfits, likes, rank, best month, biggest fan, awards won, best outfits, and a ready-made best-of block they can paste into their own lookbook.
 
@@ -95,7 +95,7 @@ Outfits are ranked by the likes they received **in their first 30 days**, so an 
 
 | Award | Year | Quarter | Month |
 |---|---|---|---|
-| Outfit of the period and top 10 (max 2 outfits per member) | ✓ | ✓ | ✓ |
+| Outfit of the period and top outfits | Top 50, max 5 per member (shown in blocks of 10) | Top 10, max 2 per member | Top 10, max 2 per member |
 | Outfit of the month, for each month | ✓ | ✓ | — |
 | Member of the period: sum of the member's best N outfits | N = 10 | N = 5 | N = 3 |
 | Rising Star: first OOTD ever in the period, best median, min outfits | 5 | 3 | 2 |
@@ -107,7 +107,7 @@ Outfits are ranked by the likes they received **in their first 30 days**, so an 
 
 | Period | Badges |
 |---|---|
-| Year | OOTD of the Year {year} (gold), OOTD Top 10 {year} (silver), Member of the Year {year} (gold), Rising Star {year} (silver), OOTD of the Month (bronze) |
+| Year | OOTD of the Year {year} (gold), OOTD Top 50 {year} (silver), Member of the Year {year} (gold), Rising Star {year} (silver), OOTD of the Month (bronze) |
 | Quarter | OOTD of the Quarter (silver), Member of the Quarter (silver), Rising Star of the Quarter (bronze), OOTD of the Month (bronze) |
 | Month | OOTD of the Month (bronze) |
 

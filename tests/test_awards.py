@@ -25,7 +25,22 @@ class TestTopOutfits:
             make_post(2, 'b', 1, 50, like_count=60),
             make_post(3, 'c', 1, 50, like_count=55),
         ]
-        assert [p.id for p in top_outfits(posts)] == [2, 3, 1]
+        assert [p.id for p in top_outfits(posts, 10, 2)] == [2, 3, 1]
+
+
+class TestTopSizeByPeriod:
+
+    def test_year_has_top_50_with_five_per_member(self):
+        posts = [make_post(i, f'member{i % 12}', 1 + i % 12, 100 - i) for i in range(1, 80)]
+        top = compute_awards(posts, YEAR_2025).top
+        assert len(top) == 50
+        assert max(sum(p.username == u for p in top) for u in {p.username for p in top}) == 5
+
+    def test_quarter_keeps_top_10_with_two_per_member(self):
+        posts = [make_post(i, f'member{i % 6}', 1 + i % 3, 100 - i) for i in range(1, 80)]
+        top = compute_awards(posts, Period.parse('2025-Q1')).top
+        assert len(top) == 10
+        assert max(sum(p.username == u for p in top) for u in {p.username for p in top}) == 2
 
 
 class TestMonthlyWinners:

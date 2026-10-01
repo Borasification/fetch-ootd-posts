@@ -59,12 +59,21 @@ class TestAwardsTopic:
 
     def test_contains_every_section(self):
         markdown = render_awards(compute_awards(sample_posts(), YEAR_2025))
-        for heading in ("Tenue de l'année", 'Le top 10', 'Tenue du mois', "Membre de l'année",
+        for heading in ("Tenue de l'année", 'Le top 50', 'Tenue du mois', "Membre de l'année",
                         "Révélation de l'année", 'Le plus régulier', "Pilier de l'OOTD"):
             assert heading in markdown
         assert '@alice — ❤ 70 — [voir le post](/t/outfit-of-the-day-part-12bis/13530/1)' in markdown
         assert '- **Décembre** — @bob' in markdown
         assert markdown.count('[grid]') == markdown.count('[/grid]')
+
+    def test_year_top_50_is_split_in_blocks_of_10(self):
+        posts = [make_post(i, f'member{i % 12}', 1 + i % 12, 100 - i) for i in range(1, 80)]
+        markdown = render_awards(compute_awards(posts, YEAR_2025))
+        assert 'Au plus 5 tenues par membre dans le top 50.' in markdown
+        for block in ('### 2–10', '### 11–20', '### 21–30', '### 31–40', '### 41–50'):
+            assert block in markdown
+        assert '\n50. @' in markdown and '\n51. @' not in markdown
+        assert markdown.count('[grid]') >= 5
 
     def test_empty_year_renders(self):
         markdown = render_awards(compute_awards([], YEAR_2025))
