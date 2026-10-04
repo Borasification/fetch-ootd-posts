@@ -56,6 +56,9 @@ python -m ootd_awards <command> --period <period>
 | `wrapped --send` | Sends each eligible member their Wrapped | **Yes, to every eligible member** |
 | `wrapped --to NAME` | Sends **you** a preview of that member's Wrapped | Yes, a PM to you only |
 | `wrapped --to NAME --send` | Sends the Wrapped to that member only (add `--resend` if they already got one, e.g. a corrected version) | **Yes, to that member** |
+| `story-post [--draft]` | Writes the forum post that carries the story page (`output/<period>/vestiaire-post.md`); `--draft` also PMs it to you | Only with `--draft` (a PM to you) |
+| `theme-zip` | Packages the Vestiaire theme component as `output/vestiaire-theme.zip` | No |
+| `story` | Writes the animated "Vestiaire" page for the period to `output/<period>/story.html`, to open in a browser | No |
 | `exclude <post link> [--reason ...]` | Marks a post as "not an outfit" (a product photo, an inspiration collage...) so every period ignores it. `exclude --list` shows them | No (local file `data/excluded_posts.txt`) |
 
 `fetch` is the only command that queries the forum. The others work from the cache, and tell you which months to fetch when data is missing.
@@ -88,6 +91,30 @@ python -m ootd_awards exclude https://forum.borasification.com/t/<slug>/<topic>/
 - **No duplicates.** Badge grants are logged in `data/badges_granted.txt` and Wrapped sends in `data/wrapped_sent_<period>.txt`, so re-running never grants or sends twice. The badge log is shared by all periods, so an "OOTD of the Month" won in a quarterly review is not granted again by the yearly one. If you revoke a badge by hand, delete its line from the log.
 - **Provisional results.** Outfits are ranked on their first 30 days of likes, so a period's results settle 30 days after it ends (Q3 2026: from 31 October 2026). Before that, every command warns, and `publish`, `badges --publish` and `wrapped --send` refuse to run unless you add `--allow-provisional`.
 - **Fresh numbers.** `fetch` always re-queries the period's months, which updates their like counts. Run it again just before publishing.
+
+## The "Vestiaire" story page
+
+`python -m ootd_awards story --year 2025` builds an animated, interactive look back at the period, styled as a tailor's workroom: the year cut out of a photo mosaic, the top 50 as a scroll-driven runway, a countdown to the outfit of the period, outfits per month on a tape measure, members as sewing buttons, the awards as woven labels, and each member's own year.
+
+The page code (`ootd_awards/story/story.js` and `story.css`) holds no data; the generated `story.html` embeds the period's data and stays in `output/` (gitignored). It respects reduced motion, follows light and dark mode, and works on mobile. The same code is meant to run inside the forum as a Discourse theme component, so the photos stay behind the forum login.
+
+### On the forum
+
+The page runs inside the forum through the **Vestiaire OOTD** theme component (`discourse-theme/`), so photos and names stay behind the login. A post carries the period's data; the component shows a card in the post, and the card opens the page full screen. "Ton bilan" shows the logged-in member's own year.
+
+1. **Raise the post size limit** once: Admin › Settings › `max post length` to `150000`. A year's packed data is about 60 000 characters.
+2. **Install the component** once:
+   - `python -m ootd_awards theme-zip`, then Admin › Customize › Themes › Install › *From your device*, with `output/vestiaire-theme.zip`;
+   - or from git: `git subtree split --prefix=discourse-theme -b vestiaire-theme && git push origin vestiaire-theme`, then *From a git repository* with this repo's URL and branch `vestiaire-theme` (updates become one click).
+
+   Then add it to your active theme(s).
+3. **For each period**:
+   ```bash
+   python -m ootd_awards fetch --year 2020
+   python -m ootd_awards story --year 2020          # optional local preview
+   python -m ootd_awards story-post --year 2020 --draft   # PM to yourself: check the card and the page
+   pbcopy < output/2020/vestiaire-post.md          # then paste it as the first post of the year's topic
+   ```
 
 ## Award rules
 
@@ -140,7 +167,9 @@ ootd_awards/
   awards.py       award rules (pure functions)
   render.py       French markdown for the awards topic and Wrapped PMs
   publish.py      drafts, topic, badges and Wrapped sending
+  story.py        data and forum post for the story page; story/ holds the preview template
   queries/        the two Data Explorer SQL queries
 tests/            pytest suite, with synthetic data only
+discourse-theme/  the Vestiaire theme component: the story page's CSS and JS, fonts, forum mounting
 data/, output/    cache and generated files: forum data, gitignored, never commit
 ```

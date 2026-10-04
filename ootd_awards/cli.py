@@ -10,6 +10,7 @@ as well.
 """
 
 import argparse
+import shutil
 import sys
 from collections import Counter
 from datetime import date
@@ -24,6 +25,7 @@ from .dataset import (
 )
 from .period import Period, month_name
 from .render import render_awards, render_wrapped
+from .story import DISCOURSE_DEFAULT_MAX_POST_LENGTH, render_story_html, story_payload, story_post_markdown
 
 
 def make_client(args):
@@ -210,6 +212,44 @@ def cmd_wrapped(args):
     )
 
 
+def cmd_story(args):
+    """Write the standalone story page for the period (offline, nothing is sent)."""
+    awards, _ = load(args)
+    member_fans = fans(args)
+    path = period_output_dir(args.period) / 'story.html'
+    path.write_text(render_story_html(story_payload(awards, member_fans, args.forum_url)), encoding='utf-8')
+    print(f'Story page written to {path}')
+    print(f'Open it in your browser: open "{path}"')
+
+
+def cmd_story_post(args):
+    """Write the forum post that carries the story page (offline); --draft PMs it to you."""
+    awards, _ = load(args)
+    warn_if_provisional(args)
+    markdown = story_post_markdown(story_payload(awards, fans(args), args.forum_url))
+    path = period_output_dir(args.period) / 'vestiaire-post.md'
+    path.write_text(markdown, encoding='utf-8')
+    print(f'Vestiaire post written to {path} ({len(markdown):,} characters)')
+    if len(markdown) > DISCOURSE_DEFAULT_MAX_POST_LENGTH:
+        print(f'  Above Discourse\'s default limit of {DISCOURSE_DEFAULT_MAX_POST_LENGTH:,}: raise '
+              f'"max post length" (Admin > Settings) above {len(markdown):,}.')
+    if args.draft:
+        client = make_client(args)
+        post = client.create_post(markdown, title=f'[Brouillon] Le vestiaire OOTD {args.period.label}',
+                                  target_recipients=config.username)
+        print(f'Draft sent to @{config.username}: {publish.post_link(client, post)}')
+    else:
+        print(f'Copy it to the clipboard: pbcopy < "{path}"')
+
+
+def cmd_theme_zip(args):
+    """Package the Vestiaire theme component for Admin > Customize > Themes > Install > From your device."""
+    theme = config.ROOT / 'discourse-theme'
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    archive = shutil.make_archive(str(OUTPUT_DIR / 'vestiaire-theme'), 'zip', root_dir=theme)
+    print(f'Theme component packaged: {archive}')
+
+
 def cmd_exclude(args):
     if args.list:
         path = DATA_DIR / EXCLUSIONS_FILE
@@ -278,6 +318,19 @@ Typical flow:
                                 help='Send again to members already sent to (e.g. a corrected version)')
     wrapped_parser.set_defaults(func=cmd_wrapped)
 
+    commands.add_parser('story', parents=[common],
+                        help='Write the animated story page for the period (local preview, offline)'
+                        ).set_defaults(func=cmd_story)
+
+    story_post_parser = commands.add_parser(
+        'story-post', parents=[common],
+        help='Write the forum post that carries the story page (needs the Vestiaire theme component)')
+    story_post_parser.add_argument('--draft', action='store_true', help='Also send it to yourself as a PM')
+    story_post_parser.set_defaults(func=cmd_story_post)
+
+    commands.add_parser('theme-zip', help='Package the Vestiaire theme component as a .zip to install on the forum'
+                        ).set_defaults(func=cmd_theme_zip)
+
     exclude_parser = commands.add_parser(
         'exclude', help='Mark a post as "not an outfit" so every period ignores it (local only)')
     exclude_parser.add_argument('url', nargs='?', help='Post link: .../t/<slug>/<topic>/<post number>')
@@ -286,6 +339,6 @@ Typical flow:
     exclude_parser.set_defaults(func=cmd_exclude)
 
     args = parser.parse_args()
-    if args.func is not cmd_exclude:
+    if args.func not in (cmd_exclude, cmd_theme_zip):
         args.period = resolve_period(args)
     args.func(args)

@@ -28,6 +28,7 @@ class Post:
     likes_30d: int
     first_ootd_at: Optional[datetime]
     uploads: List[Dict] = field(default_factory=list)
+    avatar: Optional[str] = None  # profile picture URL; None for default letter avatars
 
     @property
     def path(self) -> str:
@@ -63,6 +64,7 @@ def parse_row(row: Dict) -> Post:
         likes_30d=int(row['likes_30d'] or 0),
         first_ootd_at=parse_datetime(row.get('first_ootd_at')),
         uploads=[u for u in uploads if u],
+        avatar=row.get('avatar_url') or None,
     )
 
 

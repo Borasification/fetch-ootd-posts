@@ -96,6 +96,24 @@ first_ootd AS MATERIALIZED (
       LIMIT 1
     ) AS first_ootd_at
   FROM (SELECT DISTINCT pp.user_id FROM period_posts pp JOIN post_images pi ON pi.post_id = pp.id) members
+),
+-- Each member's profile picture, as the ~120 px version Discourse already
+-- generated (falling back to the original). NULL for default letter avatars.
+avatars AS MATERIALIZED (
+  SELECT
+    fo.user_id,
+    COALESCE(
+      (
+        SELECT oi.url
+        FROM optimized_images oi
+        WHERE oi.upload_id = u.uploaded_avatar_id
+        ORDER BY ABS(oi.width - 120)
+        LIMIT 1
+      ),
+      (SELECT up.url FROM uploads up WHERE up.id = u.uploaded_avatar_id)
+    ) AS avatar_url
+  FROM first_ootd fo
+  JOIN users u ON u.id = fo.user_id
 )
 SELECT
   pp.id,
@@ -108,10 +126,12 @@ SELECT
   pp.like_count,
   COALESCE(l.likes_30d, 0) AS likes_30d,
   fo.first_ootd_at,
+  av.avatar_url,
   pi.uploads
 FROM period_posts pp
 JOIN post_images pi ON pi.post_id = pp.id
 JOIN users u ON u.id = pp.user_id
 LEFT JOIN likes l ON l.post_id = pp.id
 LEFT JOIN first_ootd fo ON fo.user_id = pp.user_id
+LEFT JOIN avatars av ON av.user_id = pp.user_id
 ORDER BY pp.id
