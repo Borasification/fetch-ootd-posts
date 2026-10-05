@@ -1,0 +1,11 @@
+{
+  "name": "Vestiaire OOTD",
+  "component": true,
+  "about_url": "https://github.com/Borasification/fetch-ootd-posts",
+  "license_url": "https://github.com/Borasification/fetch-ootd-posts/blob/master/LICENSE",
+  "assets": {
+    "vs_bodoni": "assets/bodoni-moda.woff2",
+    "vs_bodoni_italic": "assets/bodoni-moda-italic.woff2",
+    "vs_schibsted": "assets/schibsted-grotesk.woff2"
+  }
+}

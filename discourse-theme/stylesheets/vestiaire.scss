@@ -1,0 +1,121 @@
+/*
+ * The card that stands in the post, and the full-screen overlay it opens.
+ * Plain CSS (no Sass), like story.scss.
+ */
+
+/* The data block is for the component only */
+.cooked .d-wrap[data-wrap="vestiaire-data"] { display: none; }
+
+.vs-teaser {
+  --vs-night: #0D1626;
+  --vs-chalk: #ECEDE8;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.2rem 1.5rem;
+  align-items: end;
+  margin: 1rem 0;
+  padding: 1.6rem 1.6rem 1.5rem;
+  color: var(--vs-chalk);
+  background: var(--vs-night);
+  border-radius: 2px;
+  overflow: hidden;
+  font-family: "Schibsted Grotesk", system-ui, sans-serif;
+  box-shadow: 0 22px 40px -26px rgba(0, 0, 0, 0.7);
+}
+
+.vs-teaser__prints {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.vs-teaser__prints img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  padding: 5px;
+  background: #FBFBF8;
+  box-shadow: 0 14px 22px -16px #000;
+}
+
+.vs-teaser__title {
+  margin: 0 0 0.3rem;
+  font-family: "Bodoni Moda", Didot, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--vs-chalk);
+}
+
+.vs-teaser__stats {
+  margin: 0;
+  color: rgba(236, 237, 232, 0.68);
+  font-size: 0.92rem;
+}
+
+.vs-teaser__open {
+  font: inherit;
+  font-weight: 700;
+  padding: 0.75rem 1.2rem;
+  border: 0;
+  border-radius: 2px;
+  color: #fff;
+  background: #7B1E3A;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.vs-teaser__open:hover { background: #962848; }
+
+.vs-teaser__open:focus-visible,
+.vs-overlay__close:focus-visible {
+  outline: 3px solid #D6B285;
+  outline-offset: 3px;
+}
+
+.vs-teaser--error { grid-template-columns: 1fr; }
+
+/* Full screen, over the forum header */
+html.vs-overlay-open,
+html.vs-overlay-open body { overflow: hidden; }
+
+.vs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: #0D1626;
+}
+
+.vs-overlay__close {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 0.9rem);
+  right: 0.9rem;
+  z-index: 60;
+  font: 700 0.9rem/1 "Schibsted Grotesk", system-ui, sans-serif;
+  padding: 0.65rem 0.95rem;
+  border: 0;
+  border-radius: 2px;
+  color: #14213D;
+  background: #F4F3EE;
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+/* Leave room for the close button in the masthead */
+.vs-overlay .vs-masthead { padding-right: calc(var(--vs-gutter) + 10.5rem); }
+
+@media (max-width: 600px) {
+  .vs-overlay .vs-masthead { padding-right: var(--vs-gutter); }
+  .vs-overlay .vs-masthead > :last-child { display: none; }
+  .vs-teaser { grid-template-columns: 1fr; }
+  .vs-teaser__prints { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .vs-teaser__prints img:nth-child(n + 4) { display: none; }
+}

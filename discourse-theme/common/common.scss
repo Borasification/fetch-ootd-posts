@@ -1,0 +1,28 @@
+// Vestiaire OOTD: the story page, shown full screen from a card in a post.
+
+@font-face {
+  font-family: "Bodoni Moda";
+  src: url($vs_bodoni) format("woff2");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bodoni Moda";
+  src: url($vs_bodoni_italic) format("woff2");
+  font-weight: 400 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Schibsted Grotesk";
+  src: url($vs_schibsted) format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@import "story";
+@import "vestiaire";
